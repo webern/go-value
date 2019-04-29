@@ -8,7 +8,7 @@ jobs:
       # specify the version
       - image: circleci/golang:1.12
 
-    working_directory: /repo
+    working_directory: /go/repo
     steps:
       - checkout
       - run: export GO111MODULE=on && go get -v -t -d ./...
