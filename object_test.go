@@ -17,14 +17,14 @@ func TestNewObjectValue(t *testing.T) {
 		t.Error(msg)
 	}
 
-	o := v.GetObject()
+	o := v.Object()
 	if o == nil {
-		t.Error("value.GetObject() should never return nil, but did")
+		t.Error("value.Object() should never return nil, but did")
 	}
 
 	v = Value{}
-	o = v.GetObject()
+	o = v.Object()
 	if o == nil {
-		t.Error("value.GetObject() should never return nil, but did")
+		t.Error("value.Object() should never return nil, but did")
 	}
 }

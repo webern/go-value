@@ -46,9 +46,9 @@ func (v *Value) Equals(other Value) bool {
 	case Time:
 		return v.Time().Unix() == other.Time().Unix()
 	case ArrayType:
-		return ArraysEqual(v.GetArray(), other.GetArray())
+		return ArraysEqual(v.Array(), other.Array())
 	case ObjectType:
-		return objectsEqual(v.GetObject(), other.GetObject())
+		return objectsEqual(v.Object(), other.Object())
 	}
 
 	return false
@@ -183,6 +183,11 @@ func NewValueFromMystery(data interface{}) (v Value, err error) {
 	case bool:
 		{
 			v.SetBool(data.(bool))
+			return v, nil
+		}
+	case time.Time:
+		{
+			v.SetTime(data.(time.Time))
 			return v, nil
 		}
 	}
@@ -341,7 +346,7 @@ func (v Value) Time() time.Time {
 	return *v.time
 }
 
-func (v Value) GetObject() (value Object) {
+func (v Value) Object() (value Object) {
 	if v.obj == nil {
 		return Object{}
 	}
@@ -349,7 +354,7 @@ func (v Value) GetObject() (value Object) {
 	return v.obj
 }
 
-func (v Value) GetArray() (value Array) {
+func (v Value) Array() (value Array) {
 	if v.arr == nil {
 		return Array{}
 	}
@@ -431,7 +436,7 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		}
 	case ObjectType:
 		{
-			base := v.GetObject()
+			base := v.Object()
 
 			if base == nil {
 				return make([]byte, 0), nil
@@ -441,7 +446,7 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		}
 	case ArrayType:
 		{
-			base := v.GetArray()
+			base := v.Array()
 
 			if base == nil {
 				return make([]byte, 0), nil
@@ -519,31 +524,31 @@ func (v Value) Clone() Value {
 		return newVal
 	case Bool:
 		{
-			newVal.SetBool(*v.b)
+			newVal.SetBool(v.Bool())
 		}
 	case Int:
 		{
-			newVal.SetInt(*v.i)
+			newVal.SetInt(v.Int())
 		}
 	case Float:
 		{
-			newVal.SetFloat(*v.f)
+			newVal.SetFloat(v.Float())
 		}
 	case String:
 		{
-			newVal.SetString(*v.str)
+			newVal.SetString(v.String())
 		}
 	case Time:
 		{
-			newVal.SetTime(*v.time)
+			newVal.SetTime(v.Time())
 		}
 	case ObjectType:
 		{
-			newVal.SetObject(v.obj.Clone())
+			newVal.SetObject(v.Object().Clone())
 		}
 	case ArrayType:
 		{
-			newVal.SetArray(v.arr.Clone())
+			newVal.SetArray(v.Array().Clone())
 		}
 	}
 
@@ -570,6 +575,12 @@ func NewStringValue(v string) Value {
 func NewBoolValue(v bool) Value {
 	var val Value
 	val.SetBool(v)
+	return val
+}
+
+func NewTimeValue(t time.Time) Value {
+	var val Value
+	val.SetTime(t)
 	return val
 }
 
