@@ -199,7 +199,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Go Build.Build">
+  <component name="RunManager" selected="Go Test.Test">
     <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <module name="go-value" />
       <working_directory value="$PROJECT_DIR$/" />
@@ -281,7 +281,7 @@
     <proxy>direct</proxy>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/go_value$Test.out" NAME="Test Coverage Results" MODIFIED="1556513156374" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
+    <SUITE FILE_PATH="coverage/go_value$Test.out" NAME="Test Coverage Results" MODIFIED="1556514467026" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="GoCoverage" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/sort_by_length.go">
