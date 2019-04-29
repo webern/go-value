@@ -11,15 +11,17 @@ import (
 	"time"
 )
 
-// Value represents a weakly typed value, like we might find in JSON
+// Value represents a weakly typed value, like we might find in JSON. Caution: this object is not trivially copyable.
+// You may use the Clone function to get a deep copy. If you use the assignment operator for copying, you will get a
+// shallow copy with multiple pointers to the same address. This is almost certainly not what you want.
 type Value struct {
 	b    *bool
 	i    *int
 	f    *float64
 	str  *string
 	time *time.Time
-	obj  Object // Kinda not supported
-	arr  Array  // Kinda not supported
+	obj  Object
+	arr  Array
 }
 
 func (v *Value) Equals(other Value) bool {
@@ -144,125 +146,130 @@ func (v *Value) SetType(iqType Type) {
 	}
 }
 
-func (v *Value) Coerce(data interface{}) error {
+// NewValueFromMystery makes a best effort to represent 'data' as a Value object
+func NewValueFromMystery(data interface{}) (v Value, err error) {
 
 	switch data.(type) {
 	case float32:
 		{
 			v.SetFloat(float64(data.(float32)))
-			return nil
+			return v, nil
 		}
 	case float64:
 		{
 			v.SetFloat(data.(float64))
-			return nil
+			return v, nil
 		}
 	case int:
 		{
 			v.SetInt(data.(int))
-			return nil
+			return v, nil
 		}
 	case int64:
 		{
 			v.SetInt(int(data.(int64)))
-			return nil
+			return v, nil
 		}
 	case int32:
 		{
 			v.SetInt(int(data.(int32)))
-			return nil
+			return v, nil
 		}
 	case string:
 		{
 			v.SetString(data.(string))
-			return nil
+			return v, nil
 		}
 	case bool:
 		{
 			v.SetBool(data.(bool))
-			return nil
+			return v, nil
 		}
 	}
 
 	if val, ok := data.(Value); ok {
-		*v = val.Clone()
-		return nil
+		v = val.Clone()
+		return v, nil
 	} else if val, ok := data.(*Value); ok {
-		*v = val.Clone()
-		return nil
+		v = val.Clone()
+		return v, nil
 	} else if arr, ok := data.([]interface{}); ok {
 		newArr := NewArray()
 
 		for _, currentMystery := range arr {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newArr = append(newArr, newVal)
+
+			newArr = append(newArr, newValFromMystery)
 		}
 
 		v.SetArray(newArr)
-		return nil
+		return v, nil
 	} else if arr, ok := data.(*[]interface{}); ok {
 		newArr := NewArray()
 
 		for _, currentMystery := range *arr {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newArr = append(newArr, newVal)
+
+			newArr = append(newArr, newValFromMystery)
 		}
 
 		v.SetArray(newArr)
-		return nil
+		return v, nil
 	} else if imap, ok := data.(map[string]interface{}); ok {
 		newObj := NewObject(len(imap))
 
 		for name, currentMystery := range imap {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newObj[name] = newVal
+
+			newObj[name] = newValFromMystery
 		}
 
 		v.SetObject(newObj)
-		return nil
+		return v, nil
 	} else if imap, ok := data.(*map[string]interface{}); ok {
 		newObj := NewObject(len(*imap))
 
 		for name, currentMystery := range *imap {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newObj[name] = newVal
+
+			newObj[name] = newValFromMystery
 		}
 
 		v.SetObject(newObj)
-		return nil
+		return v, nil
 	}
 
 	// maybe it is a struct, maybe we can marshal and unmarshal it
 	b, err := json.Marshal(data)
 
 	if err != nil {
-		return err
+		return v, err
 	}
 
-	err = json.Unmarshal(b, v)
+	err = json.Unmarshal(b, &v)
 
 	if err != nil {
 		v.SetNull()
-		return err
+		return v, err
 	}
 
-	return nil
+	return v, nil
 }
 
 func (v Value) Type() Type {
