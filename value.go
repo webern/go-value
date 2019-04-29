@@ -1,4 +1,4 @@
-// go-value, Copyright (c) 2019 by Matthew James Briggs
+// go-value, Copyright (c) 2019-present by Matthew James Briggs
 
 package value
 
@@ -11,15 +11,17 @@ import (
 	"time"
 )
 
-// Value represents a weakly typed value, like we might find in JSON
+// Value represents a weakly typed value, like we might find in JSON. Caution: this object is not trivially copyable.
+// You may use the Clone function to get a deep copy. If you use the assignment operator for copying, you will get a
+// shallow copy with multiple pointers to the same address. This is almost certainly not what you want.
 type Value struct {
 	b    *bool
 	i    *int
 	f    *float64
 	str  *string
 	time *time.Time
-	obj  Object // Kinda not supported
-	arr  Array  // Kinda not supported
+	obj  Object
+	arr  Array
 }
 
 func (v *Value) Equals(other Value) bool {
@@ -43,10 +45,10 @@ func (v *Value) Equals(other Value) bool {
 		return v.String() == other.String()
 	case Time:
 		return v.Time().Unix() == other.Time().Unix()
-	case Array:
-		return arraysEqual(v.GetArray(), other.GetArray())
-	case Object:
-		return objectsEqual(v.GetObject(), other.GetObject())
+	case ArrayType:
+		return ArraysEqual(v.Array(), other.Array())
+	case ObjectType:
+		return objectsEqual(v.Object(), other.Object())
 	}
 
 	return false
@@ -54,7 +56,7 @@ func (v *Value) Equals(other Value) bool {
 
 func (v *Value) SetType(iqType Type) {
 
-	if iqType < Null || iqType > Array {
+	if iqType < Null || iqType > ArrayType {
 		iqType = Null
 	}
 
@@ -92,8 +94,7 @@ func (v *Value) SetType(iqType Type) {
 		}
 	case Float:
 		{
-			var newD float64
-			newD = 0.0
+			newD := 0.0
 			v.b = nil
 			v.i = nil
 			v.f = &newD
@@ -122,7 +123,7 @@ func (v *Value) SetType(iqType Type) {
 			v.obj = nil
 			v.arr = nil
 		}
-	case Object:
+	case ObjectType:
 		{
 			v.b = nil
 			v.i = nil
@@ -132,7 +133,7 @@ func (v *Value) SetType(iqType Type) {
 			v.obj = NewObject(3)
 			v.arr = nil
 		}
-	case Array:
+	case ArrayType:
 		{
 			v.b = nil
 			v.i = nil
@@ -145,125 +146,135 @@ func (v *Value) SetType(iqType Type) {
 	}
 }
 
-func (v *Value) Coerce(data interface{}) error {
+// NewValueFromMystery makes a best effort to represent 'data' as a Value object
+func NewValueFromMystery(data interface{}) (v Value, err error) {
 
 	switch data.(type) {
 	case float32:
 		{
 			v.SetFloat(float64(data.(float32)))
-			return nil
+			return v, nil
 		}
 	case float64:
 		{
 			v.SetFloat(data.(float64))
-			return nil
+			return v, nil
 		}
 	case int:
 		{
 			v.SetInt(data.(int))
-			return nil
+			return v, nil
 		}
 	case int64:
 		{
 			v.SetInt(int(data.(int64)))
-			return nil
+			return v, nil
 		}
 	case int32:
 		{
 			v.SetInt(int(data.(int32)))
-			return nil
+			return v, nil
 		}
 	case string:
 		{
 			v.SetString(data.(string))
-			return nil
+			return v, nil
 		}
 	case bool:
 		{
 			v.SetBool(data.(bool))
-			return nil
+			return v, nil
+		}
+	case time.Time:
+		{
+			v.SetTime(data.(time.Time))
+			return v, nil
 		}
 	}
 
 	if val, ok := data.(Value); ok {
-		*v = val.Clone()
-		return nil
+		v = val.Clone()
+		return v, nil
 	} else if val, ok := data.(*Value); ok {
-		*v = val.Clone()
-		return nil
+		v = val.Clone()
+		return v, nil
 	} else if arr, ok := data.([]interface{}); ok {
 		newArr := NewArray()
 
 		for _, currentMystery := range arr {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newArr = append(newArr, newVal)
+
+			newArr = append(newArr, newValFromMystery)
 		}
 
 		v.SetArray(newArr)
-		return nil
+		return v, nil
 	} else if arr, ok := data.(*[]interface{}); ok {
 		newArr := NewArray()
 
 		for _, currentMystery := range *arr {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newArr = append(newArr, newVal)
+
+			newArr = append(newArr, newValFromMystery)
 		}
 
 		v.SetArray(newArr)
-		return nil
+		return v, nil
 	} else if imap, ok := data.(map[string]interface{}); ok {
 		newObj := NewObject(len(imap))
 
 		for name, currentMystery := range imap {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newObj[name] = newVal
+
+			newObj[name] = newValFromMystery
 		}
 
 		v.SetObject(newObj)
-		return nil
+		return v, nil
 	} else if imap, ok := data.(*map[string]interface{}); ok {
 		newObj := NewObject(len(*imap))
 
 		for name, currentMystery := range *imap {
-			newVal := Value{}
-			err := newVal.Coerce(currentMystery)
-			if err != nil {
-				return err
+			newValFromMystery, errx := NewValueFromMystery(currentMystery)
+
+			if errx != nil {
+				return v, errx
 			}
-			newObj[name] = newVal
+
+			newObj[name] = newValFromMystery
 		}
 
 		v.SetObject(newObj)
-		return nil
+		return v, nil
 	}
 
 	// maybe it is a struct, maybe we can marshal and unmarshal it
 	b, err := json.Marshal(data)
 
 	if err != nil {
-		return err
+		return v, err
 	}
 
-	err = json.Unmarshal(b, v)
+	err = json.Unmarshal(b, &v)
 
 	if err != nil {
 		v.SetNull()
-		return err
+		return v, err
 	}
 
-	return nil
+	return v, nil
 }
 
 func (v Value) Type() Type {
@@ -279,9 +290,9 @@ func (v Value) Type() Type {
 	} else if v.time != nil {
 		return Time
 	} else if v.obj != nil {
-		return Object
+		return ObjectType
 	} else if v.arr != nil {
-		return Array
+		return ArrayType
 	}
 
 	return Null
@@ -289,7 +300,7 @@ func (v Value) Type() Type {
 
 func (v Value) TryBool() (value bool, err error) {
 	if v.b == nil {
-		return false, fmt.Errorf("TryBool was called but the type is %str", v.Type().String())
+		return false, fmt.Errorf("TryBool was called but the type is %s", v.Type().String())
 	}
 
 	return *v.b, nil
@@ -297,7 +308,7 @@ func (v Value) TryBool() (value bool, err error) {
 
 func (v Value) TryInt() (value int, err error) {
 	if v.i == nil {
-		return 0, fmt.Errorf("TryInt was called but the type is %str", v.Type().String())
+		return 0, fmt.Errorf("TryInt was called but the type is %s", v.Type().String())
 	}
 
 	return *v.i, nil
@@ -305,7 +316,7 @@ func (v Value) TryInt() (value int, err error) {
 
 func (v Value) TryFloat() (value float64, err error) {
 	if v.f == nil {
-		return 0.0, fmt.Errorf("TryFloat was called but the type is %str", v.Type().String())
+		return 0.0, fmt.Errorf("TryFloat was called but the type is %s", v.Type().String())
 	}
 
 	return *v.f, nil
@@ -313,7 +324,7 @@ func (v Value) TryFloat() (value float64, err error) {
 
 func (v Value) TryString() (value string, err error) {
 	if v.str == nil {
-		return "", fmt.Errorf("TryString was called but the type is %str", v.Type().String())
+		return "", fmt.Errorf("TryString was called but the type is %s", v.Type().String())
 	}
 
 	return *v.str, nil
@@ -321,7 +332,7 @@ func (v Value) TryString() (value string, err error) {
 
 func (v Value) TryTime() (value time.Time, err error) {
 	if v.time == nil {
-		return time.Time{}, fmt.Errorf("TryTime was called but the type is %str", v.Type().String())
+		return time.Time{}, fmt.Errorf("TryTime was called but the type is %s", v.Type().String())
 	}
 
 	return *v.time, nil
@@ -335,7 +346,7 @@ func (v Value) Time() time.Time {
 	return *v.time
 }
 
-func (v Value) GetObject() (value Object) {
+func (v Value) Object() (value Object) {
 	if v.obj == nil {
 		return Object{}
 	}
@@ -343,7 +354,7 @@ func (v Value) GetObject() (value Object) {
 	return v.obj
 }
 
-func (v Value) GetArray() (value Array) {
+func (v Value) Array() (value Array) {
 	if v.arr == nil {
 		return Array{}
 	}
@@ -381,12 +392,12 @@ func (v *Value) SetTime(value time.Time) {
 }
 
 func (v *Value) SetObject(value Object) {
-	v.SetType(Object)
+	v.SetType(ObjectType)
 	v.obj = value
 }
 
 func (v *Value) SetArray(value Array) {
-	v.SetType(Array)
+	v.SetType(ArrayType)
 	v.arr = value
 }
 
@@ -423,22 +434,22 @@ func (v Value) MarshalJSON() ([]byte, error) {
 			base, _ := v.TryTime()
 			return json.Marshal(base)
 		}
-	case Object:
+	case ObjectType:
 		{
-			base := v.GetObject()
+			base := v.Object()
 
 			if base == nil {
-				return make([]byte, 0, 0), nil
+				return make([]byte, 0), nil
 			}
 
 			return json.Marshal(base)
 		}
-	case Array:
+	case ArrayType:
 		{
-			base := v.GetArray()
+			base := v.Array()
 
 			if base == nil {
-				return make([]byte, 0, 0), nil
+				return make([]byte, 0), nil
 			}
 
 			return json.Marshal(base)
@@ -448,8 +459,6 @@ func (v Value) MarshalJSON() ([]byte, error) {
 			return json.Marshal(nil)
 		}
 	}
-
-	return json.Marshal(nil)
 }
 
 func (v *Value) UnmarshalJSON(data []byte) error {
@@ -515,35 +524,40 @@ func (v Value) Clone() Value {
 		return newVal
 	case Bool:
 		{
-			newVal.SetBool(*v.b)
+			newVal.SetBool(v.Bool())
 		}
 	case Int:
 		{
-			newVal.SetInt(*v.i)
+			newVal.SetInt(v.Int())
 		}
 	case Float:
 		{
-			newVal.SetFloat(*v.f)
+			newVal.SetFloat(v.Float())
 		}
 	case String:
 		{
-			newVal.SetString(*v.str)
+			newVal.SetString(v.String())
 		}
 	case Time:
 		{
-			newVal.SetTime(*v.time)
+			newVal.SetTime(v.Time())
 		}
-	case Object:
+	case ObjectType:
 		{
-			newVal.SetObject(v.obj.Clone())
+			newVal.SetObject(v.Object().Clone())
 		}
-	case Array:
+	case ArrayType:
 		{
-			newVal.SetArray(v.arr.Clone())
+			newVal.SetArray(v.Array().Clone())
 		}
 	}
 
 	return newVal
+}
+
+func NewValue() Value {
+	var val Value
+	return val
 }
 
 func NewIntValue(v int) Value {
@@ -561,6 +575,24 @@ func NewStringValue(v string) Value {
 func NewBoolValue(v bool) Value {
 	var val Value
 	val.SetBool(v)
+	return val
+}
+
+func NewTimeValue(t time.Time) Value {
+	var val Value
+	val.SetTime(t)
+	return val
+}
+
+func NewFloatValue(f float64) Value {
+	var val Value
+	val.SetFloat(f)
+	return val
+}
+
+func NewArrayValue(a Array) Value {
+	var val Value
+	val.SetArray(a)
 	return val
 }
 
@@ -680,9 +712,9 @@ func (v Value) CoerceToInt() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case Array:
+	case ArrayType:
 		fallthrough
-	case Object:
+	case ObjectType:
 		fallthrough
 	default:
 		break
@@ -738,9 +770,9 @@ func (v Value) CoearceToFloat() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case Array:
+	case ArrayType:
 		fallthrough
-	case Object:
+	case ObjectType:
 		fallthrough
 	default:
 		break
@@ -827,9 +859,9 @@ func (v Value) CoerceToBool() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case Array:
+	case ArrayType:
 		fallthrough
-	case Object:
+	case ObjectType:
 		fallthrough
 	default:
 		break

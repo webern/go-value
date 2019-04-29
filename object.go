@@ -1,4 +1,4 @@
-// go-value, Copyright (c) 2019 by Matthew James Briggs
+// go-value, Copyright (c) 2019-present by Matthew James Briggs
 
 package value
 
