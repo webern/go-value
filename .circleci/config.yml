@@ -14,6 +14,6 @@ jobs:
       - run: export GO111MODULE=on && go get -v -t -d ./...
       - run: export GO111MODULE=on && go test -v ./... -coverprofile cover.out && go tool cover -func cover.out -o cover.func.txt && go tool cover -html cover.out -o cover.html
       - store_artifacts:
-          path: /repo/cover.html
+          path: /go/repo/cover.html
       - store_artifacts:
-          path: /repo/cover.func.txt
+          path: /go/repo/cover.func.txt
