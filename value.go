@@ -1,4 +1,4 @@
-// go-value, Copyright (c) 2019 by Matthew James Briggs
+// go-value, Copyright (c) 2019-present by Matthew James Briggs
 
 package value
 
@@ -43,9 +43,9 @@ func (v *Value) Equals(other Value) bool {
 		return v.String() == other.String()
 	case Time:
 		return v.Time().Unix() == other.Time().Unix()
-	case ArrayX:
-		return arraysEqual(v.GetArray(), other.GetArray())
-	case ObjectX:
+	case ArrayType:
+		return ArraysEqual(v.GetArray(), other.GetArray())
+	case ObjectType:
 		return objectsEqual(v.GetObject(), other.GetObject())
 	}
 
@@ -54,7 +54,7 @@ func (v *Value) Equals(other Value) bool {
 
 func (v *Value) SetType(iqType Type) {
 
-	if iqType < Null || iqType > ArrayX {
+	if iqType < Null || iqType > ArrayType {
 		iqType = Null
 	}
 
@@ -92,8 +92,7 @@ func (v *Value) SetType(iqType Type) {
 		}
 	case Float:
 		{
-			var newD float64
-			newD = 0.0
+			newD := 0.0
 			v.b = nil
 			v.i = nil
 			v.f = &newD
@@ -122,7 +121,7 @@ func (v *Value) SetType(iqType Type) {
 			v.obj = nil
 			v.arr = nil
 		}
-	case ObjectX:
+	case ObjectType:
 		{
 			v.b = nil
 			v.i = nil
@@ -132,7 +131,7 @@ func (v *Value) SetType(iqType Type) {
 			v.obj = NewObject(3)
 			v.arr = nil
 		}
-	case ArrayX:
+	case ArrayType:
 		{
 			v.b = nil
 			v.i = nil
@@ -279,9 +278,9 @@ func (v Value) Type() Type {
 	} else if v.time != nil {
 		return Time
 	} else if v.obj != nil {
-		return ObjectX
+		return ObjectType
 	} else if v.arr != nil {
-		return ArrayX
+		return ArrayType
 	}
 
 	return Null
@@ -381,12 +380,12 @@ func (v *Value) SetTime(value time.Time) {
 }
 
 func (v *Value) SetObject(value Object) {
-	v.SetType(Object)
+	v.SetType(ObjectType)
 	v.obj = value
 }
 
 func (v *Value) SetArray(value Array) {
-	v.SetType(Array)
+	v.SetType(ArrayType)
 	v.arr = value
 }
 
@@ -423,22 +422,22 @@ func (v Value) MarshalJSON() ([]byte, error) {
 			base, _ := v.TryTime()
 			return json.Marshal(base)
 		}
-	case Object:
+	case ObjectType:
 		{
 			base := v.GetObject()
 
 			if base == nil {
-				return make([]byte, 0, 0), nil
+				return make([]byte, 0), nil
 			}
 
 			return json.Marshal(base)
 		}
-	case Array:
+	case ArrayType:
 		{
 			base := v.GetArray()
 
 			if base == nil {
-				return make([]byte, 0, 0), nil
+				return make([]byte, 0), nil
 			}
 
 			return json.Marshal(base)
@@ -448,8 +447,6 @@ func (v Value) MarshalJSON() ([]byte, error) {
 			return json.Marshal(nil)
 		}
 	}
-
-	return json.Marshal(nil)
 }
 
 func (v *Value) UnmarshalJSON(data []byte) error {
@@ -533,17 +530,22 @@ func (v Value) Clone() Value {
 		{
 			newVal.SetTime(*v.time)
 		}
-	case Object:
+	case ObjectType:
 		{
 			newVal.SetObject(v.obj.Clone())
 		}
-	case Array:
+	case ArrayType:
 		{
 			newVal.SetArray(v.arr.Clone())
 		}
 	}
 
 	return newVal
+}
+
+func NewValue() Value {
+	var val Value
+	return val
 }
 
 func NewIntValue(v int) Value {
@@ -561,6 +563,18 @@ func NewStringValue(v string) Value {
 func NewBoolValue(v bool) Value {
 	var val Value
 	val.SetBool(v)
+	return val
+}
+
+func NewFloatValue(f float64) Value {
+	var val Value
+	val.SetFloat(f)
+	return val
+}
+
+func NewArrayValue(a Array) Value {
+	var val Value
+	val.SetArray(a)
 	return val
 }
 
@@ -680,9 +694,9 @@ func (v Value) CoerceToInt() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case Array:
+	case ArrayType:
 		fallthrough
-	case Object:
+	case ObjectType:
 		fallthrough
 	default:
 		break
@@ -738,9 +752,9 @@ func (v Value) CoearceToFloat() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case Array:
+	case ArrayType:
 		fallthrough
-	case Object:
+	case ObjectType:
 		fallthrough
 	default:
 		break
@@ -827,9 +841,9 @@ func (v Value) CoerceToBool() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case ArrayX:
+	case ArrayType:
 		fallthrough
-	case ObjectX:
+	case ObjectType:
 		fallthrough
 	default:
 		break

@@ -1,4 +1,4 @@
-// go-value, Copyright (c) 2019 by Matthew James Briggs
+// go-value, Copyright (c) 2019-present by Matthew James Briggs
 
 package value
 
@@ -11,14 +11,14 @@ import (
 type Type int
 
 const (
-	Null Type = iota
-	Bool
-	Int
-	Float
-	String
-	Time
-	ObjectX
-	ArrayX
+	Null       Type = iota // Null has bi value
+	Bool                   // Bool holds a boolean value
+	Int                    // Int holds an int value
+	Float                  // Float holds a float64 value
+	String                 // String holds a string value
+	Time                   // Time holds a time.Time value
+	ObjectType             // ObjectType holds an Object, which is a map[string]Value
+	ArrayType              // ArrayType holds a slice which is []Value
 )
 
 const (
@@ -33,14 +33,14 @@ const (
 )
 
 var typeToString = map[Type]string{
-	Null:    StringNull,
-	Bool:    StringBool,
-	Int:     StringInt,
-	Float:   StringDecimal,
-	String:  StringString,
-	Time:    StringTime,
-	ObjectX: StringObject,
-	ArrayX:  StringArray,
+	Null:       StringNull,
+	Bool:       StringBool,
+	Int:        StringInt,
+	Float:      StringDecimal,
+	String:     StringString,
+	Time:       StringTime,
+	ObjectType: StringObject,
+	ArrayType:  StringArray,
 }
 
 var stringToType = map[string]Type{
@@ -50,8 +50,8 @@ var stringToType = map[string]Type{
 	StringDecimal: Float,
 	StringString:  String,
 	StringTime:    Time,
-	StringObject:  ObjectX,
-	StringArray:   ArrayX,
+	StringObject:  ObjectType,
+	StringArray:   ArrayType,
 }
 
 func (t Type) String() string {
@@ -78,8 +78,18 @@ func (t *Type) Parse(s string) {
 
 func (t Type) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString("\"")
-	buffer.WriteString(t.String())
-	buffer.WriteString("\"")
+	_, err := buffer.WriteString(t.String())
+
+	if err != nil {
+		return buffer.Bytes(), err
+	}
+
+	_, err = buffer.WriteString("\"")
+
+	if err != nil {
+		return buffer.Bytes(), err
+	}
+
 	return buffer.Bytes(), nil
 }
 
