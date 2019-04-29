@@ -43,9 +43,9 @@ func (v *Value) Equals(other Value) bool {
 		return v.String() == other.String()
 	case Time:
 		return v.Time().Unix() == other.Time().Unix()
-	case Array:
+	case ArrayX:
 		return arraysEqual(v.GetArray(), other.GetArray())
-	case Object:
+	case ObjectX:
 		return objectsEqual(v.GetObject(), other.GetObject())
 	}
 
@@ -54,7 +54,7 @@ func (v *Value) Equals(other Value) bool {
 
 func (v *Value) SetType(iqType Type) {
 
-	if iqType < Null || iqType > Array {
+	if iqType < Null || iqType > ArrayX {
 		iqType = Null
 	}
 
@@ -122,7 +122,7 @@ func (v *Value) SetType(iqType Type) {
 			v.obj = nil
 			v.arr = nil
 		}
-	case Object:
+	case ObjectX:
 		{
 			v.b = nil
 			v.i = nil
@@ -132,7 +132,7 @@ func (v *Value) SetType(iqType Type) {
 			v.obj = NewObject(3)
 			v.arr = nil
 		}
-	case Array:
+	case ArrayX:
 		{
 			v.b = nil
 			v.i = nil
@@ -279,9 +279,9 @@ func (v Value) Type() Type {
 	} else if v.time != nil {
 		return Time
 	} else if v.obj != nil {
-		return Object
+		return ObjectX
 	} else if v.arr != nil {
-		return Array
+		return ArrayX
 	}
 
 	return Null
@@ -289,7 +289,7 @@ func (v Value) Type() Type {
 
 func (v Value) TryBool() (value bool, err error) {
 	if v.b == nil {
-		return false, fmt.Errorf("TryBool was called but the type is %str", v.Type().String())
+		return false, fmt.Errorf("TryBool was called but the type is %s", v.Type().String())
 	}
 
 	return *v.b, nil
@@ -297,7 +297,7 @@ func (v Value) TryBool() (value bool, err error) {
 
 func (v Value) TryInt() (value int, err error) {
 	if v.i == nil {
-		return 0, fmt.Errorf("TryInt was called but the type is %str", v.Type().String())
+		return 0, fmt.Errorf("TryInt was called but the type is %s", v.Type().String())
 	}
 
 	return *v.i, nil
@@ -305,7 +305,7 @@ func (v Value) TryInt() (value int, err error) {
 
 func (v Value) TryFloat() (value float64, err error) {
 	if v.f == nil {
-		return 0.0, fmt.Errorf("TryFloat was called but the type is %str", v.Type().String())
+		return 0.0, fmt.Errorf("TryFloat was called but the type is %s", v.Type().String())
 	}
 
 	return *v.f, nil
@@ -313,7 +313,7 @@ func (v Value) TryFloat() (value float64, err error) {
 
 func (v Value) TryString() (value string, err error) {
 	if v.str == nil {
-		return "", fmt.Errorf("TryString was called but the type is %str", v.Type().String())
+		return "", fmt.Errorf("TryString was called but the type is %s", v.Type().String())
 	}
 
 	return *v.str, nil
@@ -321,7 +321,7 @@ func (v Value) TryString() (value string, err error) {
 
 func (v Value) TryTime() (value time.Time, err error) {
 	if v.time == nil {
-		return time.Time{}, fmt.Errorf("TryTime was called but the type is %str", v.Type().String())
+		return time.Time{}, fmt.Errorf("TryTime was called but the type is %s", v.Type().String())
 	}
 
 	return *v.time, nil
@@ -827,9 +827,9 @@ func (v Value) CoerceToBool() (newValue Value, ok bool) {
 		}
 	case Time:
 		fallthrough
-	case Array:
+	case ArrayX:
 		fallthrough
-	case Object:
+	case ObjectX:
 		fallthrough
 	default:
 		break
