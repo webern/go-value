@@ -1,4 +1,4 @@
-// go-value, Copyright (c) 2019 by Matthew James Briggs
+// go-value, Copyright (c) 2019-present by Matthew James Briggs
 
 package value
 
@@ -18,7 +18,7 @@ func NewArray() Array {
 
 // Clone creates a deep copy of the Array
 func (a Array) Clone() Array {
-	var newArr = make(Array, len(a), len(a))
+	var newArr = make(Array, len(a))
 
 	if len(a) == 0 {
 		return newArr
@@ -97,8 +97,8 @@ func (a *Array) UnmarshalJSON(data []byte) error {
 
 // Private
 
-// arraysEqual returns true if the arrays are of the same length and all values are equal (in the same order)
-func arraysEqual(left, right Array) bool {
+// ArraysEqual returns true if the arrays are of the same length and all values are equal (in the same order)
+func ArraysEqual(left, right Array) bool {
 	l := len(left)
 	if l != len(right) {
 		return false

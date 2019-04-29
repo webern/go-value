@@ -1,16 +1,16 @@
-// go-value, Copyright (c) 2019 by Matthew James Briggs
+// go-value, Copyright (c) 2019-present by Matthew James Briggs
 
 package value
 
 import (
-	"bytes"
 	"math"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 const epsilon = 0.00000000000001
+const StringFalse = "false"
+const StringTrue = "true"
 
 // ParseResult is a list of the possible ways that the string can be parsed, along with the resultant parsed value
 //type ParseResult map[ParseType]interface{}
@@ -84,7 +84,7 @@ func Parse(s string) ParseResult {
 			diff := math.Abs(f - f2)
 			if diff < epsilon {
 				pt.IsInt = true
-				pt.TheInt = int(i)
+				pt.TheInt = i
 			} else {
 				i++
 				f2 = float64(i)
@@ -123,17 +123,14 @@ func isTrueString(s *string) bool {
 		return false
 	}
 
-	if *s == "true" {
+	if *s == StringTrue {
 		return true
 	}
 
 	l := strings.ToLower(*s)
 
-	if l == "true" {
-		return true
-	}
-
-	return false
+	ret := l == StringTrue
+	return ret
 }
 
 func isFalseString(s *string) bool {
@@ -141,17 +138,14 @@ func isFalseString(s *string) bool {
 		return false
 	}
 
-	if *s == "false" {
+	if *s == StringFalse {
 		return true
 	}
 
 	l := strings.ToLower(*s)
 
-	if l == "false" {
-		return true
-	}
-
-	return false
+	ret := l == StringFalse
+	return ret
 }
 
 // false means the string is not a number. true, means that the string *might* be a number
@@ -182,92 +176,4 @@ func isNumericPeek(s *string) bool {
 	}
 
 	return true
-}
-
-// you should first use isNumericPeek to make sure s begins with a valid char
-func possibleNumerics(s *string) (isInt, isDecimal, isScientific bool) {
-	isInt = true
-	for ix, r := range *s {
-		if ix == 0 && r == '-' {
-			continue
-		} else if r == '.' {
-			isInt = false
-			isDecimal = true
-		} else if r == 'e' {
-			isInt = false
-			isScientific = true
-			isDecimal = false
-		} else if r == 'E' {
-			isInt = false
-			isScientific = true
-			isDecimal = false
-		} else if r < '0' {
-			return false, false, false
-		} else if r > '9' {
-			return false, false, false
-		}
-	}
-
-	return isInt, isDecimal, isScientific
-}
-
-func ParseScientific(s *string) (value float64, ok bool) {
-	value = 0.0
-	isNegative := false
-	isExponentEncountered := false
-	isBeginningOfExponent := false
-	isExponentNegative := false
-	isBeginning := true
-	left := bytes.Buffer{}
-	right := bytes.Buffer{}
-
-	for _, r := range *s {
-		if !isExponentEncountered {
-			if isBeginning && r == '-' {
-				isNegative = true
-				isBeginning = false
-			} else if unicode.IsNumber(r) || r == '.' {
-				isBeginning = false
-				left.WriteRune(r)
-			} else if r == 'e' || r == 'E' {
-				isExponentEncountered = true
-				isBeginningOfExponent = true
-			} else {
-				return 0.0, false
-			}
-		} else if isExponentEncountered {
-			if isBeginningOfExponent && r == '-' {
-				isExponentNegative = true
-				isBeginningOfExponent = false
-			} else if unicode.IsNumber(r) {
-				isBeginningOfExponent = false
-				right.WriteRune(r)
-			} else {
-				return 0.0, false
-			}
-		}
-	}
-
-	leftStr := left.String()
-	rightStr := right.String()
-	leftFloat, err := strconv.ParseFloat(leftStr, 64)
-
-	if err != nil {
-		return 0.0, false
-	}
-
-	rightInt64, err := strconv.ParseInt(rightStr, 10, strconv.IntSize)
-	rightInt := int(rightInt64)
-
-	if isNegative {
-		leftFloat *= -1
-	}
-
-	if isExponentNegative {
-		rightInt *= -1
-	}
-
-	pow := math.Pow10(rightInt)
-	value = leftFloat * pow
-	return value, true
 }
